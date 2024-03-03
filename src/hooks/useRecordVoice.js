@@ -11,6 +11,7 @@ export const useRecordVoice = () => {
   const chunks = useRef([]);
 
   const startRecording = () => {
+    console.log(`Starting recording`)
     if (mediaRecorder) {
       isRecording.current = true;
       mediaRecorder.start();
@@ -19,6 +20,7 @@ export const useRecordVoice = () => {
   };
 
   const stopRecording = () => {
+    console.log(`Stop recording`)
     if (mediaRecorder) {
       isRecording.current = false;
       mediaRecorder.stop();
@@ -27,6 +29,7 @@ export const useRecordVoice = () => {
   };
 
   const getText = async (base64data) => {
+    console.log(`Transcribing`)
     try {
       const response = await fetch("/api/speechToText", {
         method: "POST",
@@ -38,16 +41,19 @@ export const useRecordVoice = () => {
         }),
       }).then((res) => res.json());
       const { text } = response;
+      console.log(`Got response: ${text}`)
       setText(text);
     } catch (error) {
-      console.log(error);
+      console.error(error);
     }
   };
 
   const initialMediaRecorder = (stream) => {
+    console.log(`Initializing media recorder...`)
     const mediaRecorder = new MediaRecorder(stream);
 
     mediaRecorder.onstart = () => {
+      console.log(`Media recorder onstart`)
       createMediaStream(stream);
       chunks.current = [];
     };
@@ -57,6 +63,7 @@ export const useRecordVoice = () => {
     };
 
     mediaRecorder.onstop = () => {
+      console.log(`Media recorder onstop`)
       const audioBlob = new Blob(chunks.current, { type: "audio/wav" });
       blobToBase64(audioBlob, getText);
     };

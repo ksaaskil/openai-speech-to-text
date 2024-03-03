@@ -14,11 +14,14 @@ export async function POST(req) {
   const body = await req.json();
   const base64Audio = body.audio;
   const audio = Buffer.from(base64Audio, "base64");
+  console.log(`Sending audio of ${audio.byteLength} bytes`)
   const filePath = "tmp/input.wav";
 
   try {
+    console.log(`Writing file to temp`)
     fs.writeFileSync(filePath, audio);
     const readStream = fs.createReadStream(filePath);
+    console.log(`Sending to OpenAI...`)
     const data = await openai.audio.transcriptions.create({
       file: readStream,
       model: "whisper-1",
