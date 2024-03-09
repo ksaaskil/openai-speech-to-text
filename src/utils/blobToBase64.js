@@ -1,5 +1,4 @@
 
-//callback - where we want to get result
 const blobToBase64 = (blob, callback) => {
   const reader = new FileReader();
   reader.onload = function () {

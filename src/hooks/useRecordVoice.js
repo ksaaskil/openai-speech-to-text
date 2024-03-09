@@ -4,6 +4,7 @@ import { blobToBase64 } from "@/utils/blobToBase64";
 import { createMediaStream } from "@/utils/createMediaStream";
 
 export const useRecordVoice = () => {
+  const [state, setState] = useState("Waiting")
   const [text, setText] = useState("");
   const [mediaRecorder, setMediaRecorder] = useState(null);
   const [recording, setRecording] = useState(false);
@@ -17,6 +18,7 @@ export const useRecordVoice = () => {
       mediaRecorder.start();
       setRecording(true);
     }
+    setState("Recording...")
   };
 
   const stopRecording = () => {
@@ -26,9 +28,24 @@ export const useRecordVoice = () => {
       mediaRecorder.stop();
       setRecording(false);
     }
+    setState("Stopped recording")
   };
 
+  function setAudioURL(url) {
+    const audio = document.getElementById('audio');
+    audio.src = url
+  }
+
+  function onRecordingReady(e) {
+    var audio = document.getElementById('audio');
+    // e.data contains a blob representing the recording
+    const url = URL.createObjectURL(chunks.current[0]);
+    audio.src = url
+    audio.play();
+  }
+
   const getText = async (base64data) => {
+    setState("Transcribing...")
     console.log(`Transcribing`)
     try {
       const response = await fetch("/api/speechToText", {
@@ -43,12 +60,14 @@ export const useRecordVoice = () => {
       const { text } = response;
       console.log(`Got response: ${text}`)
       setText(text);
+      setState("Waiting")
     } catch (error) {
       console.error(error);
     }
+    // onRecordingReady();
   };
 
-  const initialMediaRecorder = (stream) => {
+  const initializeMediaRecorder = (stream) => {
     console.log(`Initializing media recorder...`)
     const mediaRecorder = new MediaRecorder(stream);
 
@@ -64,7 +83,11 @@ export const useRecordVoice = () => {
 
     mediaRecorder.onstop = () => {
       console.log(`Media recorder onstop`)
-      const audioBlob = new Blob(chunks.current, { type: "audio/wav" });
+      console.log(`Converting ${chunks.current.length} chunks`)
+      const type = mediaRecorder.mimeType
+      const audioBlob = new Blob(chunks.current, { type });
+      const audioUrl = URL.createObjectURL(audioBlob);
+      setAudioURL(audioUrl);
       blobToBase64(audioBlob, getText);
     };
 
@@ -72,12 +95,16 @@ export const useRecordVoice = () => {
   };
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      navigator.mediaDevices
-        .getUserMedia({ audio: true })
-        .then(initialMediaRecorder);
+    async function initialize() {
+      if (typeof window !== "undefined") {
+        const stream = await navigator.mediaDevices
+          .getUserMedia({ audio: true })
+        initializeMediaRecorder(stream);
+        // window.dontGCThis = stream;
+      }
     }
+    initialize()
   }, []);
 
-  return { recording, startRecording, stopRecording, text };
+  return { recording, startRecording, stopRecording, text, state };
 };
